@@ -3,6 +3,7 @@ import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Scanner;
 
 public class Main {
@@ -12,9 +13,10 @@ public class Main {
         ArrayList<Row> trainingSet = new ArrayList<Row>();
         ArrayList<Row> testSet = new ArrayList<Row>();
 
-        double[] weights;
-        double bias;
+        double bias = 0;
         double a = 0.01;
+
+        HashMap<String, Integer> answMap = new HashMap<String, Integer>();
 
         loop: while (true){
             System.out.println("\n==========================\nChose any option by entering the number: " +
@@ -33,18 +35,22 @@ public class Main {
                     System.out.print("Enter training set path: ");
                     Scanner sc = new Scanner(System.in);
                     String path = "src/"+sc.nextLine();
-                    trainingSet = inputTheTrainingSet(path);
+                    trainingSet = inputTheTrainingSet(path, answMap);
                     System.out.print("Enter test set path: ");
                     path = "src/"+sc.nextLine();
-                    testSet = inputTheTrainingSet(path);
-
-                    generateWeights(trainingSet.getFirst().attributes.length);
+                    testSet = inputTheTrainingSet(path, answMap);
                     break;
                 case 2:
                     System.out.print("Enter number of epochs: ");
                     Scanner sca = new Scanner(System.in);
                     int n = sca.nextInt();
-                    train(n);
+                    train(
+                            trainingSet,
+                            weights,
+                            bias,
+                            a,
+                            answMap
+                    );
                     break;
                 case 3:
                     ownVector();
@@ -60,23 +66,29 @@ public class Main {
     private static void ownVector() {
     }
 
-    private static void train(double[] x, double[] w, double bias, double a) {
+    private static double[] train(ArrayList<Row> set, double[] w, double bias, double a, HashMap<String, Integer> answMap) {
         double[] newWeights = new double[w.length];
         double newBias;
 
-        double net = 0;
-        for (int i = 0; i< x.length;i++){
-            net += x[i]*w[i];
-        }
-        net -= bias;
-
-        double d;
-
-        if (net < 0){
-            for (int i = 0; i< w.length; i++){
-                newWeights[i] = w[i] + a * ()
+        for (Row r : set){
+            double[] x = r.attributes;
+            double net = 0;
+            for (int i = 0; i< x.length;i++){
+                net += x[i]*w[i];
             }
+            net -= bias;
+
+            double y = 1;
+            double d = answMap.get(r.classification);
+
+            if (net < 0) y = 0;
+            for (int i = 0; i< w.length; i++){
+                // delta rule
+                newWeights[i] = w[i] + a * (d - y) * x[i];
+            }
+
         }
+        return newWeights;
 
 
     }
@@ -91,7 +103,7 @@ public class Main {
         return output;
     }
 
-    private static ArrayList<Row> inputTheTrainingSet(String path) {
+    private static ArrayList<Row> inputTheTrainingSet(String path, HashMap<String, Integer> answMap) {
         ArrayList<Row> output = new ArrayList<Row>();
         try(BufferedReader br = new BufferedReader(new FileReader(path))){
             String l;
@@ -105,6 +117,8 @@ public class Main {
                     }
                     else{
                         r.classification = row[i];
+                        if (answMap.isEmpty()) answMap.put(row[i], 1);
+                        answMap.putIfAbsent(row[i], 0);
                     }
                 }
                 System.out.println(r);
